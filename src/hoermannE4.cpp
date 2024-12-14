@@ -449,7 +449,7 @@ void HoermannE4Class::run()
             {
                 delay(9 - (messageSeperatePauseMicros / 1000)); // TODO this is not non-blocking
                 sendBuf(txBuffer, txLen);
-                Log.log("Sendt");
+                //Log.log("Sendt");
             }
 
             restartReading();
