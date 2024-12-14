@@ -15,7 +15,7 @@ enum HoermannE4State
 enum HoermannE4StateCode
 {
     E4_STATE_STOPPED = 0x00,
-    
+
     E4_STATE_OPENING = 0x01,
     E4_STATE_CLOSING = 0x02,
     E4_STATE_HALV_OPENING = 0x05,
@@ -23,10 +23,11 @@ enum HoermannE4StateCode
 
     E4_STATE_HALV_OPEN = 0x20,
     E4_STATE_HALV_CLOSED = 0x40,
-    E4_STATE_HALV_HALV_OPEN = 0x80,    
+    E4_STATE_HALV_HALV_OPEN = 0x80,
 };
 
-enum HoermannE4Command {
+enum HoermannE4Command
+{
     E4_CMD_NONE = 0,
     E4_CMD_OPEN = 1,
     E4_CMD_CLOSE = 2,
@@ -36,7 +37,8 @@ enum HoermannE4Command {
     E4_CMD_HALV_OPEN = 6,
 };
 
-enum HoermannE4SendingState {
+enum HoermannE4SendingState
+{
     INIT,
     FIRST_CMD_SENDT,
     SECOND_CMD_SENDT,
@@ -53,6 +55,14 @@ struct HoermannE4Broadcast
     bool light;
     bool motorRunning;
     unsigned long receivedAt;
+};
+
+struct HoermannE4SendState
+{
+    HoermannE4Command sendCommand;
+    HoermannE4SendingState sendCommandState;
+    unsigned long sendCommandStateChangedAt;
+    unsigned long sendCommandDelayMs;
 };
 
 class HoermannE4Class
@@ -72,12 +82,12 @@ private:
     // sending
     uint8_t txBuffer[255];
     size_t txLen = 0;
-    HoermannE4Command sendCommand = E4_CMD_CLOSE;
-    HoermannE4SendingState sendCommandState = FINISHED;
-    unsigned long sendCommandStateChangedAt = millis();
-    unsigned long sendCommandDelayMs = 700;
-    
 
+    // sending state - guarded by sendMutex
+    mutex_t sendMutex;
+    HoermannE4SendState sendState = {E4_CMD_CLOSE, FINISHED, millis(), 700};
+
+    void handleSend(uint8_t *b1,uint8_t *b2,uint8_t *b3);
     void sendBuf(uint8_t *buf, size_t len);
     bool validateCrc16(size_t len);
     void restartReading();
@@ -89,7 +99,8 @@ private:
     HoermannE4State currentState = E4_INIT;
     unsigned long currentStateChangedAt = millis();
 
-    mutex_t mutex;
+    // boardcast state - guarded by broadcastMutex
+    mutex_t broadcastMutex;
     HoermannE4Broadcast lastReceivedBroadcast;
     void handleMessageBroadcast();
 
@@ -102,7 +113,5 @@ public:
 };
 
 extern HoermannE4Class HoermannE4;
-
-
 
 #endif

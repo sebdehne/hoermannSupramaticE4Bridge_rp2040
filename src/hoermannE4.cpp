@@ -3,11 +3,13 @@
 
 bool HoermannE4Class::send(HoermannE4Command cmd)
 {
-    if (sendCommandState == FINISHED && millis() - sendCommandStateChangedAt > sendCommandDelayMs)
+    CoreMutex m(&sendMutex);
+
+    if (sendState.sendCommandState == FINISHED && millis() - sendState.sendCommandStateChangedAt > sendState.sendCommandDelayMs)
     {
-        sendCommand = cmd;
-        sendCommandState = INIT;
-        sendCommandStateChangedAt = millis();
+        sendState.sendCommand = cmd;
+        sendState.sendCommandState = INIT;
+        sendState.sendCommandStateChangedAt = millis();
         return true;
     }
     else
@@ -38,7 +40,7 @@ void HoermannE4Class::printReceiveBuffer()
 
     sniprintf(logBuf, sizeof(logBuf), "Received: %s", hexBuf);
 
-    Log.log(logBuf);
+    //Log.log(logBuf);
 }
 
 void HoermannE4Class::restartReading()
@@ -46,6 +48,157 @@ void HoermannE4Class::restartReading()
     bytesRead = 0;
     currentState = E4_READING;
     currentStateChangedAt = millis();
+}
+
+void HoermannE4Class::handleSend(uint8_t *b1, uint8_t *b2, uint8_t *b3)
+{
+    CoreMutex m(&sendMutex);
+
+    switch (sendState.sendCommandState)
+    {
+    case INIT:
+    {
+        switch (sendState.sendCommand)
+        {
+        case E4_CMD_LIGHT:
+        {
+            Log.log("Sending E4_CMD_LIGHT 1");
+
+            *b1 = 0x08;
+            *b2 = 0x00;
+            *b3 = 0x02;
+            break;
+        }
+
+        case E4_CMD_CLOSE:
+        {
+            Log.log("Sending E4_CMD_CLOSE 1");
+            *b1 = 0x01;
+            *b2 = 0x20;
+            *b3 = 0x00;
+            break;
+        }
+        case E4_CMD_OPEN:
+        {
+            Log.log("Sending E4_CMD_OPEN 1");
+            *b1 = 0x01;
+            *b2 = 0x10;
+            *b3 = 0x00;
+            break;
+        }
+        case E4_CMD_TOGGLE:
+        {
+            Log.log("Sending E4_CMD_TOGGLE 1");
+            *b1 = 0x01;
+            *b2 = 0x40;
+            *b3 = 0x00;
+            break;
+        }
+        case E4_CMD_HALV_OPEN:
+        {
+            Log.log("Sending E4_CMD_HALV_OPEN 1");
+            *b1 = 0x01;
+            *b2 = 0x00;
+            *b3 = 0x04;
+            break;
+        }
+        case E4_CMD_VENT:
+        {
+            Log.log("Sending E4_CMD_VENT 1");
+            *b1 = 0x01;
+            *b2 = 0x00;
+            *b3 = 0x40;
+            break;
+        }
+
+        default:
+            break;
+        }
+
+        sendState.sendCommandState = FIRST_CMD_SENDT;
+        sendState.sendCommandStateChangedAt = millis();
+        break;
+    }
+
+    case FIRST_CMD_SENDT:
+    {
+        if (millis() - sendState.sendCommandStateChangedAt > sendState.sendCommandDelayMs)
+        {
+            switch (sendState.sendCommand)
+            {
+            case E4_CMD_LIGHT:
+            {
+                Log.log("Sending E4_CMD_LIGHT 2");
+                *b1 = 0x10;
+                *b2 = 0x00;
+                *b3 = 0x02;
+                break;
+            }
+
+            case E4_CMD_CLOSE:
+            {
+                Log.log("Sending E4_CMD_CLOSE 2");
+                *b1 = 0x02;
+                *b2 = 0x20;
+                *b3 = 0x00;
+                break;
+            }
+            case E4_CMD_OPEN:
+            {
+                Log.log("Sending E4_CMD_OPEN 2");
+                *b1 = 0x02;
+                *b2 = 0x10;
+                *b3 = 0x00;
+                break;
+            }
+            case E4_CMD_TOGGLE:
+            {
+                Log.log("Sending E4_CMD_TOGGLE 2");
+                *b1 = 0x02;
+                *b2 = 0x40;
+                *b3 = 0x00;
+                break;
+            }
+            case E4_CMD_HALV_OPEN:
+            {
+                Log.log("Sending E4_CMD_HALV_OPEN 2");
+                *b1 = 0x02;
+                *b2 = 0x00;
+                *b3 = 0x04;
+                break;
+            }
+            case E4_CMD_VENT:
+            {
+                Log.log("Sending E4_CMD_VENT 2");
+                *b1 = 0x02;
+                *b2 = 0x00;
+                *b3 = 0x40;
+                break;
+            }
+
+            default:
+                break;
+            }
+
+            sendState.sendCommandState = SECOND_CMD_SENDT;
+            sendState.sendCommandStateChangedAt = millis();
+        }
+        break;
+    }
+
+    case SECOND_CMD_SENDT:
+    {
+        if (millis() - sendState.sendCommandStateChangedAt > sendState.sendCommandDelayMs)
+        {
+            sendState.sendCommandState = FINISHED;
+            sendState.sendCommandStateChangedAt = millis();
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
 }
 
 void HoermannE4Class::sendBuf(uint8_t *buf, size_t len)
@@ -64,7 +217,7 @@ void HoermannE4Class::sendBuf(uint8_t *buf, size_t len)
 
     char logbuf[1024];
     sniprintf(logbuf, sizeof(logbuf), "Sending: %s", hexBuf);
-    Log.log(logbuf);
+    //Log.log(logbuf);
 
     Serial1.write(sendBuf, sizeof(sendBuf));
     // Serial1.flush(); // 4ms
@@ -169,151 +322,7 @@ void HoermannE4Class::handleMessage()
             uint8_t b2 = 0;
             uint8_t b3 = 0;
 
-            switch (sendCommandState)
-            {
-            case INIT:
-            {
-                switch (sendCommand)
-                {
-                case E4_CMD_LIGHT:
-                {
-                    Log.log("Sending E4_CMD_LIGHT 1");
-
-                    b1 = 0x08;
-                    b2 = 0x00;
-                    b3 = 0x02;
-                    break;
-                }
-
-                case E4_CMD_CLOSE:
-                {
-                    Log.log("Sending E4_CMD_CLOSE 1");
-                    b1 = 0x01;
-                    b2 = 0x20;
-                    b3 = 0x00;
-                    break;
-                }
-                case E4_CMD_OPEN:
-                {
-                    Log.log("Sending E4_CMD_OPEN 1");
-                    b1 = 0x01;
-                    b2 = 0x10;
-                    b3 = 0x00;
-                    break;
-                }
-                case E4_CMD_TOGGLE:
-                {
-                    Log.log("Sending E4_CMD_TOGGLE 1");
-                    b1 = 0x01;
-                    b2 = 0x40;
-                    b3 = 0x00;
-                    break;
-                }
-                case E4_CMD_HALV_OPEN:
-                {
-                    Log.log("Sending E4_CMD_HALV_OPEN 1");
-                    b1 = 0x01;
-                    b2 = 0x00;
-                    b3 = 0x04;
-                    break;
-                }
-                case E4_CMD_VENT:
-                {
-                    Log.log("Sending E4_CMD_VENT 1");
-                    b1 = 0x01;
-                    b2 = 0x00;
-                    b3 = 0x40;
-                    break;
-                }
-
-                default:
-                    break;
-                }
-
-                sendCommandState = FIRST_CMD_SENDT;
-                sendCommandStateChangedAt = millis();
-                break;
-            }
-
-            case FIRST_CMD_SENDT:
-            {
-                if (millis() - sendCommandStateChangedAt > sendCommandDelayMs)
-                {
-                    switch (sendCommand)
-                    {
-                    case E4_CMD_LIGHT:
-                    {
-                        Log.log("Sending E4_CMD_LIGHT 2");
-                        b1 = 0x10;
-                        b2 = 0x00;
-                        b3 = 0x02;
-                        break;
-                    }
-
-                    case E4_CMD_CLOSE:
-                    {
-                        Log.log("Sending E4_CMD_CLOSE 2");
-                        b1 = 0x02;
-                        b2 = 0x20;
-                        b3 = 0x00;
-                        break;
-                    }
-                    case E4_CMD_OPEN:
-                    {
-                        Log.log("Sending E4_CMD_OPEN 2");
-                        b1 = 0x02;
-                        b2 = 0x10;
-                        b3 = 0x00;
-                        break;
-                    }
-                    case E4_CMD_TOGGLE:
-                    {
-                        Log.log("Sending E4_CMD_TOGGLE 2");
-                        b1 = 0x02;
-                        b2 = 0x40;
-                        b3 = 0x00;
-                        break;
-                    }
-                    case E4_CMD_HALV_OPEN:
-                    {
-                        Log.log("Sending E4_CMD_HALV_OPEN 2");
-                        b1 = 0x02;
-                        b2 = 0x00;
-                        b3 = 0x04;
-                        break;
-                    }
-                    case E4_CMD_VENT:
-                    {
-                        Log.log("Sending E4_CMD_VENT 2");
-                        b1 = 0x02;
-                        b2 = 0x00;
-                        b3 = 0x40;
-                        break;
-                    }
-
-                    default:
-                        break;
-                    }
-
-                    sendCommandState = SECOND_CMD_SENDT;
-                    sendCommandStateChangedAt = millis();
-                }
-                break;
-            }
-
-            case SECOND_CMD_SENDT:
-            {
-                if (millis() - sendCommandStateChangedAt > sendCommandDelayMs)
-                {
-                    sendCommandState = FINISHED;
-                    sendCommandStateChangedAt = millis();
-                }
-                break;
-            }
-
-            default:
-                break;
-            }
+            handleSend(&b1, &b2, &b3);
 
             uint8_t cnt = receiveBuffer[11];
             uint8_t cmd = receiveBuffer[12];
@@ -371,7 +380,7 @@ void HoermannE4Class::handleMessage()
 
 void HoermannE4Class::handleMessageBroadcast()
 {
-    
+    CoreMutex m(&broadcastMutex);
     size_t offset = 2 + 2 + 2 + 1 + 2; // skip header + 2 bytes
     lastReceivedBroadcast.targetPos = receiveBuffer[offset + 0];
     lastReceivedBroadcast.currentPos = receiveBuffer[offset + 1];
@@ -385,7 +394,7 @@ void HoermannE4Class::handleMessageBroadcast()
 
 HoermannE4Broadcast HoermannE4Class::currentBroadcast()
 {
-    CoreMutex m(&mutex);
+    CoreMutex m(&broadcastMutex);
     HoermannE4Broadcast copy;
     copy = lastReceivedBroadcast;
     return copy;
@@ -397,7 +406,8 @@ void HoermannE4Class::run()
     {
     case E4_INIT:
     {
-        mutex_init(&mutex);
+        mutex_init(&broadcastMutex);
+        mutex_init(&sendMutex);
         Serial1.begin(57600, SERIAL_8E1);
         restartReading();
         break;
@@ -452,6 +462,5 @@ void HoermannE4Class::run()
         break;
     }
 }
-
 
 HoermannE4Class HoermannE4;
