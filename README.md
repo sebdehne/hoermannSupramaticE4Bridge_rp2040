@@ -5,7 +5,7 @@ use simple IP/UDP to interact with the door opener.
 
 - Uses the [arduino-pico SDK](https://arduino-pico.readthedocs.io/en/latest/)
 - Listens on UDP port 9000
-- When a UDP-package is received with 1-byte payload, then this byte is translated into a [HoermannE4Command](src/hoermannE4.h:29) 
+- When a UDP-package is received with 1-byte payload, then this byte is translated into a [HoermannE4Command](src/hoermannE4.h#L29) 
   and a response is sent back to the same IP+port as the request is received from.
 - Use command 0 (Nop) to just query current state
 
