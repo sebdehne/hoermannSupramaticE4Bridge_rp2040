@@ -5,6 +5,7 @@
 #include <WiFiNINA.h>
 #include "secrets.h"
 #include "config.h"
+#include <SPI.h>
 
 enum SmartHomeServerClientWifiState
 {
