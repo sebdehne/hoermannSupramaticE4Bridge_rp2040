@@ -22,4 +22,4 @@ had to do my own reverse engineering of the Hörmann UAP1-HCP because the values
 ## Demo
 Integrated into my [SmartHome app](https://github.com/sebdehne/SmartHomeServer), it looks like this:
 
-![Garage door demo](/doc/doc/garageDoorDemo.gif)
+<img src="doc/garageDoorDemo.gif" alt="Garage door demo" style="width:50%; height:auto;">
