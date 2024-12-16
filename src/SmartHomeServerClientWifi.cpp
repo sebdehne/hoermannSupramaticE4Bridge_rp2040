@@ -19,23 +19,6 @@ void SmartHomeServerClientWifiClass::markMessageConsumed()
     currentStateChangedAt = millis();
 }
 
-void SmartHomeServerClientWifiClass::send(uint8_t *buf, size_t len)
-{
-    if (currentState != SmartHomeServer_WIFI_CONNECTING)
-    {
-        if (!Udp.beginPacket(REMOTE_UDP_IP, REMOTE_UDP_PORT))
-        {
-            Log.log("SmartHomeServerClientWifi.send() - error beginPacket()");
-            return;
-        };
-        Udp.write(buf, len);
-        if (!Udp.endPacket())
-        {
-            Log.log("SmartHomeServerClientWifi.send() - error endPacket()");
-            return;
-        }
-    }
-}
 
 void SmartHomeServerClientWifiClass::run()
 {
@@ -49,7 +32,7 @@ void SmartHomeServerClientWifiClass::run()
 
     switch (currentState)
     {
-    case INIT:
+    case SmartHomeServer_INIT:
     {
 
         // pinMode(NINA_RESETN, OUTPUT);

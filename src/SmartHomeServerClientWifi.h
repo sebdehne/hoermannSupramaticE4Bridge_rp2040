@@ -33,7 +33,6 @@ public:
     void run();
     bool hasMessage();
     void markMessageConsumed();
-    void send(uint8_t *buf, size_t len);
 };
 
 extern SmartHomeServerClientWifiClass SmartHomeServerClientWifi;

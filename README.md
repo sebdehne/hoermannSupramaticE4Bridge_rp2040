@@ -18,3 +18,8 @@ had to do my own reverse engineering of the Hörmann UAP1-HCP because the values
   low noise. At first, I tried a [ITZ0924S05](https://www.digikey.no/en/products/detail/xp-power/ITZ0924S05/6797901), but
   that module was way too noicy and didn't work. Now I am using [LM2596S-ADJ Power Module](https://www.amazon.com/gp/product/B00LTSC564?ref=ppx_pt2_dt_b_prod_image).
 - And for the RS-248/TTL adapter, I am using one of [these](https://www.amazon.com/gp/product/B082Y19KV9?ref=ppx_pt2_dt_b_prod_image).
+
+## Demo
+Integrated into my [SmartHome app](https://github.com/sebdehne/SmartHomeServer), it looks like this:
+
+![Garage door demo](/doc/doc/garageDoorDemo.gif)
